@@ -232,24 +232,19 @@ class RNIOS extends Platform.IOS implements RNPlatform {
                 const hashRegEx = /[(][0-9A-Z-]*[)]/g;
                 const hashWithParen = targetEmulator.match(hashRegEx)[0];
                 const hash = hashWithParen.substr(1, hashWithParen.length - 2);
-                return TestUtil.getProcessOutput("xcodebuild -workspace " + path.join(iOSProject, TestConfig.TestAppName) + ".xcworkspace -scheme " + TestConfig.TestAppName +
-                    " -configuration Release -destination \"platform=iOS Simulator,id=" + hash + "\" -derivedDataPath build", { cwd: iOSProject, maxBuffer: 1024 * 1024 * 20, noLogStdOut: true });
-            })
-            .then<void>(
-                () => { return null; },
-                () => {
-                    // The first time an iOS project is built, it fails because it does not finish building libReact.a before it builds the test app.
-                    // Simply build again to fix the issue.
-                    if (!RNIOS.iosFirstBuild[projectDirectory]) {
-                        const iosBuildFolder = path.join(iOSProject, "build");
-                        if (fs.existsSync(iosBuildFolder)) {
-                            del.sync([iosBuildFolder], { force: true });
-                        }
-                        RNIOS.iosFirstBuild[projectDirectory] = true;
-                        return this.buildApp(projectDirectory);
+                try {
+                    return TestUtil.getProcessOutput("xcodebuild -workspace " + path.join(iOSProject, TestConfig.TestAppName) + ".xcworkspace -scheme " + TestConfig.TestAppName +
+                        " -configuration Release -destination \"platform=iOS Simulator,id=" + hash + "\" -derivedDataPath build", { cwd: iOSProject, maxBuffer: 1024 * 1024 * 20, noLogStdOut: true });
+                } catch (error) {
+                    const iosBuildFolder = path.join(iOSProject, "build");
+                    if (fs.existsSync(iosBuildFolder)) {
+                        del.sync([iosBuildFolder], { force: true });
                     }
-                    return null;
-                });
+                    return TestUtil.getProcessOutput("xcodebuild -workspace " + path.join(iOSProject, TestConfig.TestAppName) + ".xcworkspace -scheme " + TestConfig.TestAppName +
+                        " -configuration Release -destination \"platform=iOS Simulator,id=" + hash + "\" -derivedDataPath build", { cwd: iOSProject, maxBuffer: 1024 * 1024 * 20, noLogStdOut: true });
+                }
+            })
+            .then<void>(() => { return null; });
     }
 }
 
